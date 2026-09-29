@@ -14,7 +14,7 @@
     <groupId>com.ezekiel</groupId>
     <artifactId>ecommerce-fraud-risk-platform</artifactId>
     <version>1.0.0</version>
-    <name>E-Commerce Fraud & Order Risk Detection Platform</name>
+    <name>E-Commerce Fraud &amp; Order Risk Detection Platform</name>
     <description>Spring Boot + PostgreSQL order risk scoring platform with a Python risk engine.</description>
 
     <properties>
