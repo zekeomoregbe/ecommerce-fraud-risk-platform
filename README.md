@@ -1,22 +1,14 @@
 # E-Commerce Fraud & Order Risk Detection Platform
 
-A backend portfolio project that processes e-commerce orders, stores customer/order data in PostgreSQL, and assigns a transparent fraud-risk score using a Python rule engine.
+A backend service that scores e-commerce orders using customer history and transaction signals. The API is built with Spring Boot, stores data in PostgreSQL, and calls a Python rules engine to classify each order as **LOW**, **MEDIUM**, or **HIGH** risk.
 
-## Why this project exists
+## How it works
 
-E-commerce teams need a fast way to flag orders that deserve manual review. This project combines transaction data, customer history, database persistence, validation, and a separate risk-scoring module to classify orders as **LOW**, **MEDIUM**, or **HIGH** risk.
-
-## Tech stack
-
-- **Java 21**
-- **Spring Boot 3** — REST API, validation, JPA
-- **PostgreSQL**
-- **Python 3** risk-scoring module
-- **Maven**
-- **JUnit / Mockito**
-- **Docker / Docker Compose** for the API and PostgreSQL
-
-## Architecture
+1. A customer and order are submitted through the REST API.
+2. Spring Boot loads the customer and recent order history from PostgreSQL.
+3. The service calculates risk inputs such as account age, order value, recent order count, and address mismatch.
+4. Those inputs are passed to the Python risk engine.
+5. The score, risk level, and triggered reasons are stored with the order and returned in the API response.
 
 ```mermaid
 flowchart LR
@@ -27,18 +19,28 @@ flowchart LR
     API --> Client
 ```
 
-## Risk signals
+## Tech stack
 
-The current rule engine evaluates:
+- Java 21
+- Spring Boot 3
+- Spring Data JPA
+- PostgreSQL
+- Python 3
+- Maven
+- JUnit / Mockito
+- Docker / Docker Compose
+- GitHub Actions
 
-- Account age
-- Order value
-- Number of recent orders in the previous 24 hours
-- Billing/shipping address mismatch
+## Risk rules
 
-The system returns both the score and the exact reasons that contributed to it, making the decision explainable.
+The current scoring engine checks:
 
-## Example result
+- account age
+- order value
+- number of recent orders in the previous 24 hours
+- billing/shipping address mismatch
+
+Example response:
 
 ```json
 {
@@ -58,7 +60,9 @@ The system returns both the score and the exact reasons that contributed to it, 
 }
 ```
 
-## API endpoints
+The rules are deterministic so the reason behind each score is easy to inspect. A production fraud system would normally use more signals and historical data.
+
+## API
 
 ### Customers
 
@@ -77,8 +81,8 @@ The system returns both the score and the exact reasons that contributed to it, 
 | POST | `/api/orders` | Create and score an order |
 | GET | `/api/orders` | List orders |
 | GET | `/api/orders/{id}` | Get order |
-| GET | `/api/orders/customer/{customerId}` | Customer order history |
-| PUT | `/api/orders/{id}` | Update and re-score order |
+| GET | `/api/orders/customer/{customerId}` | Get customer order history |
+| PUT | `/api/orders/{id}` | Update and re-score an order |
 | DELETE | `/api/orders/{id}` | Delete order |
 
 ### Health
@@ -92,51 +96,50 @@ The system returns both the score and the exact reasons that contributed to it, 
 - Java 21
 - Maven 3.9+
 - Python 3.10+
-- PostgreSQL 15+ or Docker Desktop
+- Docker Desktop, or a local PostgreSQL 15+ instance
 
-### Option A: Run the complete stack with Docker
+### Docker
 
 ```bash
 docker compose up --build
 ```
 
-The API will be available at `http://localhost:8080` and PostgreSQL at `localhost:5432`.
+The API runs at `http://localhost:8080`.
 
-### Option B: Run the API locally
+### Run without the API container
 
-Start only PostgreSQL:
+Start PostgreSQL:
 
 ```bash
 docker compose up -d postgres
 ```
 
-Verify the Python engine:
-
-```bash
-python3 scripts/risk_engine.py   --account-age-days 2   --order-value 700   --order-frequency 5   --address-mismatch true
-```
-
-Run tests:
+Run the Python tests:
 
 ```bash
 python3 -m unittest discover -s scripts/tests -v
+```
+
+Run the Java tests:
+
+```bash
 mvn test
 ```
 
-Start the API:
+Start Spring Boot:
 
 ```bash
 mvn spring-boot:run
 ```
 
-The API starts at `http://localhost:8080`.
+## Example requests
 
-## Demo
-
-Create a new customer:
+Create a customer:
 
 ```bash
-curl -X POST http://localhost:8080/api/customers   -H 'Content-Type: application/json'   -d '{
+curl -X POST http://localhost:8080/api/customers \
+  -H 'Content-Type: application/json' \
+  -d '{
     "email":"demo@example.com",
     "billingAddress":"100 Main St, Atlanta, GA",
     "shippingAddress":"100 Main St, Atlanta, GA",
@@ -147,7 +150,9 @@ curl -X POST http://localhost:8080/api/customers   -H 'Content-Type: application
 Create and score an order:
 
 ```bash
-curl -X POST http://localhost:8080/api/orders   -H 'Content-Type: application/json'   -d '{
+curl -X POST http://localhost:8080/api/orders \
+  -H 'Content-Type: application/json' \
+  -d '{
     "customerId":1,
     "orderValue":725.00,
     "billingAddress":"100 Main St, Atlanta, GA",
@@ -155,33 +160,39 @@ curl -X POST http://localhost:8080/api/orders   -H 'Content-Type: application/js
   }'
 ```
 
-## What this demonstrates
+The same requests are also available in `requests.http`.
 
-- Object-oriented backend development with Java
-- RESTful API design
-- Spring Boot controller/service/repository architecture
-- SQL-backed relational persistence through PostgreSQL/JPA
-- CRUD operations and request validation
-- Python automation and rule-based decision logic
-- Cross-language integration
-- Unit and API integration testing
-- Error handling and request validation
-- Dockerized local deployment
-- GitHub Actions continuous integration
-- Git/GitHub-ready project organization
+## Testing
 
-## Future improvements
+The repository includes:
 
-- JWT authentication and role-based access
-- AWS deployment
-- Fraud analyst dashboard
-- Compare the rules against an anomaly-detection model after enough labeled data exists
+- Python unit tests for low-, medium-, and high-risk scoring
+- Java service tests with mocked dependencies
+- a Spring Boot API integration test using H2 that exercises the real Python scorer
+- GitHub Actions CI that runs both test suites on every push and pull request
 
-## Resume-ready description
+## Project structure
 
-**E-Commerce Fraud & Order Risk Detection Platform | Java, Spring Boot, PostgreSQL, Python**
+```text
+src/main/java/...          Spring Boot API
+src/test/java/...          Java tests
+scripts/risk_engine.py     Python scoring engine
+scripts/tests/...          Python unit tests
+docs/                      Schema and design notes
+requests.http              Example API calls
+docker-compose.yml         PostgreSQL + API local stack
+```
 
-- Developed a Spring Boot REST API to process customer orders and evaluate transaction risk using account age, order value, order frequency, and billing/shipping inconsistencies.
-- Designed a PostgreSQL relational schema for customers, orders, and risk indicators, implementing CRUD operations, input validation, and persistent data access.
-- Built a rule-based Python risk-scoring module that assigns low-, medium-, or high-risk classifications and returns the factors contributing to each score.
-- Added automated unit/integration tests and a GitHub Actions CI workflow, and containerized the API/database stack for reproducible local deployment.
+## Design notes
+
+More detail about the data model and implementation choices is available in:
+
+- `docs/DATABASE_SCHEMA.md`
+- `docs/DESIGN_NOTES.md`
+
+## Possible next steps
+
+- add JWT authentication and role-based access
+- deploy the service to AWS
+- add a small analyst dashboard
+- compare the rules with a model after enough labeled fraud data is available
