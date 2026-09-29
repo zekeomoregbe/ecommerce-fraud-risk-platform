@@ -1,0 +1,27 @@
+### Health
+GET http://localhost:8080/api/health
+
+### Create customer
+POST http://localhost:8080/api/customers
+Content-Type: application/json
+
+{
+  "email": "demo@example.com",
+  "billingAddress": "100 Main St, Atlanta, GA",
+  "shippingAddress": "100 Main St, Atlanta, GA",
+  "accountCreatedAt": "2026-09-27T10:00:00"
+}
+
+### Create high-risk order
+POST http://localhost:8080/api/orders
+Content-Type: application/json
+
+{
+  "customerId": 1,
+  "orderValue": 725.00,
+  "billingAddress": "100 Main St, Atlanta, GA",
+  "shippingAddress": "900 Different Ave, Atlanta, GA"
+}
+
+### List orders
+GET http://localhost:8080/api/orders
